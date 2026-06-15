@@ -42,7 +42,6 @@ const elements = {
     yearFilter: document.getElementById('yearFilter'),
     sortFilter: document.getElementById('sortFilter'),
     resetBtn: document.getElementById('resetBtn'),
-    navItems: document.querySelectorAll('.nav-item'),
     favoriteBtn: document.getElementById('favoriteBtn'),
     favoritesModal: document.getElementById('favoritesModal'),
     closeFavoritesModal: document.getElementById('closeFavoritesModal'),
@@ -60,24 +59,49 @@ const elements = {
 document.addEventListener('DOMContentLoaded', async () => {
     await loadGenres();
     await loadYears();
-    await loadMovies();
     setupEventListeners();
     updateFavoriteCount();
     updateAuthUI();
     if (state.isAuthenticated) {
         await loadWatchlistFromServer();
     }
+    await loadMovies();
 });
 
 function setupEventListeners() {
-    // Navigation
-    elements.navItems.forEach(item => {
-        item.addEventListener('click', () => {
-            elements.navItems.forEach(nav => nav.classList.remove('active'));
-            item.classList.add('active');
-            state.currentCategory = item.dataset.category;
+    // CinemaHub Logo click - reset to default state
+    const logo = document.querySelector('.logo');
+    if (logo) {
+        logo.addEventListener('click', () => {
+            state.selectedGenre = '';
+            state.selectedRating = '';
+            state.selectedYear = '';
+            state.sortBy = 'popularity.desc';
+            state.searchQuery = '';
+            elements.genreFilter.value = '';
+            elements.ratingFilter.value = '';
+            elements.yearFilter.value = '';
+            elements.sortFilter.value = 'popularity.desc';
+            elements.searchInput.value = '';
             state.currentPage = 1;
             loadMovies();
+        });
+    }
+
+    // Scroll buttons for rows
+    document.querySelectorAll('.scroll-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const targetId = btn.dataset.target;
+            const scrollContainer = document.getElementById(targetId);
+            if (scrollContainer) {
+                const scrollAmount = 400;
+                if (btn.classList.contains('prev-scroll')) {
+                    scrollContainer.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+                } else {
+                    scrollContainer.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+                }
+            }
         });
     });
 
@@ -269,7 +293,9 @@ function setupEventListeners() {
         logoutBtn.addEventListener('click', () => {
             logout();
             updateAuthUI();
+            updateFavoriteCount();
             alert('Logged out successfully!');
+            loadMovies();
         });
     }
 
@@ -289,6 +315,7 @@ function setupEventListeners() {
                 updateAuthUI();
                 loginForm.reset();
                 alert('Login successful!');
+                loadMovies();
             } else {
                 errorDiv.textContent = result.message;
                 errorDiv.style.display = 'block';
@@ -313,6 +340,7 @@ function setupEventListeners() {
                 updateAuthUI();
                 registerForm.reset();
                 alert('Registration successful!');
+                loadMovies();
             } else {
                 errorDiv.textContent = result.message;
                 errorDiv.style.display = 'block';
@@ -322,19 +350,115 @@ function setupEventListeners() {
 }
 
 // ===== API CALLS =====
-async function loadMovies() {
+function isSearchOrFilterActive() {
+    return !!(state.searchQuery || state.selectedGenre || state.selectedRating || state.selectedYear || state.sortBy !== 'popularity.desc');
+}
+
+async function loadAllCategoryRows() {
+    const verticalSections = document.getElementById('verticalSections');
+    const discoverSection = document.getElementById('discoverSection');
+    
+    if (verticalSections) verticalSections.style.display = 'flex';
+    if (discoverSection) discoverSection.style.display = 'none';
+    
+    const trendingScroll = document.getElementById('trendingScroll');
+    const upcomingScroll = document.getElementById('upcomingScroll');
+    const topRatedScroll = document.getElementById('topRatedScroll');
+    const popularScroll = document.getElementById('popularScroll');
+    const recommendationsRow = document.getElementById('recommendationsRow');
+    const recommendationsScroll = document.getElementById('recommendationsScroll');
+
+    if (trendingScroll) trendingScroll.innerHTML = '<p class="row-loading">Loading...</p>';
+    if (upcomingScroll) upcomingScroll.innerHTML = '<p class="row-loading">Loading...</p>';
+    if (topRatedScroll) topRatedScroll.innerHTML = '<p class="row-loading">Loading...</p>';
+    if (popularScroll) popularScroll.innerHTML = '<p class="row-loading">Loading...</p>';
+    
+    if (state.isAuthenticated) {
+        if (recommendationsRow) recommendationsRow.style.display = 'block';
+        if (recommendationsScroll) recommendationsScroll.innerHTML = '<p class="row-loading">Loading...</p>';
+    } else {
+        if (recommendationsRow) recommendationsRow.style.display = 'none';
+    }
+
+    loadRowCategory('trending', 'trendingScroll');
+    loadRowCategory('upcoming', 'upcomingScroll');
+    loadRowCategory('top_rated', 'topRatedScroll');
+    loadRowCategory('popular', 'popularScroll');
+    if (state.isAuthenticated) {
+        loadRowCategory('recommendations', 'recommendationsScroll');
+    }
+}
+
+async function loadRowCategory(category, containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
     try {
+        let url = `${BACKEND_API_URL}/movies`;
+        let headers = {};
+        
+        if (category === 'recommendations') {
+            url = `${BACKEND_API_URL}/recommendations`;
+            if (state.isAuthenticated && state.jwtToken) {
+                headers['Authorization'] = `Bearer ${state.jwtToken}`;
+            }
+        } else {
+            url = `${url}/${category}?page=1`;
+        }
+
+        const response = await fetch(url, { headers });
+        const data = await response.json();
+
+        container.innerHTML = '';
+
+        if (!data.results || data.results.length === 0) {
+            container.innerHTML = '<p class="row-empty">No movies found.</p>';
+        } else {
+            data.results.forEach((movie) => {
+                if (movie.poster_path) {
+                    const movieCard = createMovieCard(movie);
+                    container.appendChild(movieCard);
+                }
+            });
+            
+            // Set hero movie from trending if it is loaded
+            if (category === 'trending' && data.results[0]) {
+                setHeroMovie(data.results[0]);
+            }
+        }
+    } catch (error) {
+        console.error(`Error loading category ${category}:`, error);
+        container.innerHTML = '<p class="row-error">Failed to load movies.</p>';
+    }
+}
+
+async function loadMovies() {
+    if (!isSearchOrFilterActive()) {
+        await loadAllCategoryRows();
+        return;
+    }
+
+    try {
+        const discoverSection = document.getElementById('discoverSection');
+        const verticalSections = document.getElementById('verticalSections');
+        
+        if (discoverSection) discoverSection.style.display = 'block';
+        if (verticalSections) verticalSections.style.display = 'none';
+
         elements.loading.classList.add('active');
         elements.moviesGrid.innerHTML = '';
 
         let url = `${BACKEND_API_URL}/movies`;
+        let headers = {};
         
         if (state.searchQuery) {
             url = `${BACKEND_API_URL}/movies/search?query=${encodeURIComponent(state.searchQuery)}&page=${state.currentPage}`;
+            const discoverTitle = document.getElementById('discoverTitle');
+            if (discoverTitle) discoverTitle.textContent = `Search Results for "${state.searchQuery}"`;
         } else {
-            url = `${url}/${state.currentCategory}?page=${state.currentPage}`;
-            
-            // Add filters
+            const discoverTitle = document.getElementById('discoverTitle');
+            if (discoverTitle) discoverTitle.textContent = 'Discover Movies';
+
             let hasFilters = false;
             let filterParams = [];
             
@@ -350,29 +474,32 @@ async function loadMovies() {
                 filterParams.push(`year=${state.selectedYear}`);
                 hasFilters = true;
             }
-            
-            if (hasFilters) {
-                url = `${BACKEND_API_URL}/movies/filter?category=${state.currentCategory}&page=${state.currentPage}&${filterParams.join('&')}`;
+            if (state.sortBy !== 'popularity.desc') {
+                hasFilters = true;
             }
+            
+            let categoryParam = 'trending';
+            if (state.sortBy === 'vote_average.desc') {
+                categoryParam = 'top_rated';
+            } else if (state.sortBy === 'release_date.desc') {
+                categoryParam = 'upcoming';
+            }
+            
+            url = `${BACKEND_API_URL}/movies/filter?category=${categoryParam}&page=${state.currentPage}&${filterParams.join('&')}`;
         }
 
-        const response = await fetch(url);
+        const response = await fetch(url, { headers });
         const data = await response.json();
 
         if (!data.results || data.results.length === 0) {
             elements.moviesGrid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; padding: 40px; color: rgba(255,255,255,0.5);">No movies found. Try adjusting your filters.</p>';
         } else {
-            data.results.forEach((movie, index) => {
+            data.results.forEach((movie) => {
                 if (movie.poster_path) {
                     const movieCard = createMovieCard(movie);
                     elements.moviesGrid.appendChild(movieCard);
                 }
             });
-
-            // Set hero movie
-            if (data.results[0]) {
-                setHeroMovie(data.results[0]);
-            }
         }
 
         state.totalPages = data.total_pages > 500 ? 500 : data.total_pages;
@@ -512,7 +639,7 @@ async function loadWatchlistFromServer() {
     if (!state.isAuthenticated || !state.jwtToken) return;
     
     try {
-        const response = await fetch(`${BACKEND_API_URL}/watchlist`, {
+        const response = await fetch(`${BACKEND_API_URL}/watchlist/favorites`, {
             headers: {
                 'Authorization': `Bearer ${state.jwtToken}`
             }
@@ -538,6 +665,7 @@ function updateAuthUI() {
     const authButtons = document.getElementById('authButtons');
     const userMenu = document.getElementById('userMenu');
     const userGreeting = document.getElementById('userGreeting');
+    const favoriteBtn = elements.favoriteBtn || document.getElementById('favoriteBtn');
 
     if (state.isAuthenticated) {
         if (authButtons) authButtons.style.display = 'none';
@@ -545,9 +673,11 @@ function updateAuthUI() {
             userMenu.style.display = 'flex';
             if (userGreeting) userGreeting.textContent = `Welcome, ${state.username}!`;
         }
+        if (favoriteBtn) favoriteBtn.style.display = 'flex';
     } else {
         if (authButtons) authButtons.style.display = 'flex';
         if (userMenu) userMenu.style.display = 'none';
+        if (favoriteBtn) favoriteBtn.style.display = 'none';
     }
 }
 
@@ -580,7 +710,7 @@ function createMovieCard(movie) {
             <img src="${posterUrl}" alt="${movie.title}" onerror="this.src='https://via.placeholder.com/220x330?text=No+Image'">
             <div class="movie-overlay">
                 <div class="overlay-buttons">
-                    <button class="overlay-btn play-btn" title="Watch Trailer">
+                    <button class="overlay-btn play-btn" title="Watch Movie">
                         <i class="fas fa-play"></i>
                     </button>
                     <button class="overlay-btn favorite-card-btn" title="Add to Favorites">
@@ -600,13 +730,17 @@ function createMovieCard(movie) {
                 </span>
                 <span>${year}</span>
             </div>
-            <span class="movie-badge">${movie.media_type === 'tv' ? 'TV' : 'Movie'}</span>
+            <button class="movie-badge watch-now-btn">Watch Now</button>
         </div>
     `;
 
     // Event listeners
     card.querySelector('.info-btn').addEventListener('click', () => showMovieDetails(movie.id));
-    card.querySelector('.play-btn').addEventListener('click', () => playTrailer(movie.id));
+    card.querySelector('.play-btn').addEventListener('click', () => watchMovie(movie));
+    card.querySelector('.watch-now-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        watchMovie(movie);
+    });
     card.querySelector('.favorite-card-btn').addEventListener('click', (e) => {
         e.stopPropagation();
         toggleFavorite(movie);
@@ -668,7 +802,7 @@ async function showMovieDetails(movieId) {
         }
 
         // Buttons
-        document.getElementById('modalPlayBtn').onclick = () => playTrailer(movieId);
+        document.getElementById('modalPlayBtn').onclick = () => watchMovie(movie);
         
         const isFavorite = state.favorites.some(fav => fav.id === movie.id);
         document.getElementById('modalFavoriteBtn').textContent = isFavorite ? '✓ In Favorites' : '+ Add to Favorites';
@@ -702,12 +836,33 @@ function setHeroMovie(movie) {
         elements.heroGenre.textContent = genreNames || 'N/A';
     }
 
-    document.getElementById('playBtn').onclick = () => playTrailer(movie.id);
+    document.getElementById('playBtn').onclick = () => watchMovie(movie);
     document.getElementById('infoBtn').onclick = () => showMovieDetails(movie.id);
 }
 
-function playTrailer(movieId) {
-    alert('🎬 Trailer playback feature would launch here!\n\nIn a production app, this would:\n- Fetch the movie trailer video\n- Open a video player\n- Display high-quality streaming');
+async function watchMovie(movie) {
+    if (state.isAuthenticated && state.jwtToken && movie && movie.id) {
+        try {
+            await fetch(`${BACKEND_API_URL}/watchlist/add`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${state.jwtToken}`
+                },
+                body: JSON.stringify({
+                    movieId: movie.id,
+                    movieTitle: movie.title || "Unknown Movie",
+                    moviePosterPath: movie.poster_path || "",
+                    movieRating: movie.vote_average || 0.0,
+                    releaseDate: movie.release_date || ""
+                })
+            });
+        } catch (error) {
+            console.error('Error adding to watch history:', error);
+        }
+    }
+    const id = (movie && movie.id) ? movie.id : movie;
+    window.location.href = `${BACKEND_API_URL}/stream/${id}`;
 }
 
 function updatePagination() {
@@ -734,7 +889,7 @@ function toggleFavorite(movie) {
 
 async function addToWatchlist(movie) {
     try {
-        const response = await fetch(`${BACKEND_API_URL}/watchlist/add`, {
+        const response = await fetch(`${BACKEND_API_URL}/watchlist/favorites/add`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -767,7 +922,7 @@ async function addToWatchlist(movie) {
 
 async function removeFromWatchlist(movieId) {
     try {
-        const response = await fetch(`${BACKEND_API_URL}/watchlist/remove/${movieId}`, {
+        const response = await fetch(`${BACKEND_API_URL}/watchlist/favorites/remove/${movieId}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${state.jwtToken}`

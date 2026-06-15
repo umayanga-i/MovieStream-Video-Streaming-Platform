@@ -16,26 +16,12 @@
                     <i class="fas fa-film"></i>
                     <span>CinemaHub</span>
                 </div>
-                <div class="nav-menu">
-                    <button class="nav-item active" data-category="trending">
-                        <i class="fas fa-fire"></i> Trending
-                    </button>
-                    <button class="nav-item" data-category="upcoming">
-                        <i class="fas fa-calendar"></i> Upcoming
-                    </button>
-                    <button class="nav-item" data-category="top_rated">
-                        <i class="fas fa-star"></i> Top Rated
-                    </button>
-                    <button class="nav-item" data-category="popular">
-                        <i class="fas fa-heart"></i> Popular
-                    </button>
-                </div>
                 <div class="nav-right">
                     <div class="search-box">
                         <i class="fas fa-search"></i>
                         <input type="text" id="searchInput" placeholder="Search movies...">
                     </div>
-                    <button class="favorite-btn" id="favoriteBtn">
+                    <button class="favorite-btn" id="favoriteBtn" style="display: none;">
                         <i class="fas fa-bookmark"></i>
                         <span id="favoriteCount">0</span>
                     </button>
@@ -134,9 +120,62 @@
 
     <!-- Main Content -->
     <main class="container">
-        <!-- Movies Grid -->
-        <section class="movies-section">
-            <h2 class="section-title">Discover Movies</h2>
+        <!-- Vertical Movie Sections (Rows) -->
+        <div id="verticalSections" class="vertical-sections">
+            <!-- Trending Row -->
+            <section class="movie-row-section" id="trendingRow">
+                <h2 class="row-title"><i class="fas fa-fire" style="color: var(--primary-color); margin-right: 8px;"></i>Trending</h2>
+                <div class="row-container">
+                    <button class="scroll-btn prev-scroll" data-target="trendingScroll" aria-label="Scroll Left"><i class="fas fa-chevron-left"></i></button>
+                    <div class="movie-row-scroll" id="trendingScroll"></div>
+                    <button class="scroll-btn next-scroll" data-target="trendingScroll" aria-label="Scroll Right"><i class="fas fa-chevron-right"></i></button>
+                </div>
+            </section>
+            
+            <!-- Upcoming Row -->
+            <section class="movie-row-section" id="upcomingRow">
+                <h2 class="row-title"><i class="fas fa-calendar" style="color: var(--primary-color); margin-right: 8px;"></i>Upcoming</h2>
+                <div class="row-container">
+                    <button class="scroll-btn prev-scroll" data-target="upcomingScroll" aria-label="Scroll Left"><i class="fas fa-chevron-left"></i></button>
+                    <div class="movie-row-scroll" id="upcomingScroll"></div>
+                    <button class="scroll-btn next-scroll" data-target="upcomingScroll" aria-label="Scroll Right"><i class="fas fa-chevron-right"></i></button>
+                </div>
+            </section>
+            
+            <!-- Top Rated Row -->
+            <section class="movie-row-section" id="topRatedRow">
+                <h2 class="row-title"><i class="fas fa-star" style="color: var(--primary-color); margin-right: 8px;"></i>Top Rated</h2>
+                <div class="row-container">
+                    <button class="scroll-btn prev-scroll" data-target="topRatedScroll" aria-label="Scroll Left"><i class="fas fa-chevron-left"></i></button>
+                    <div class="movie-row-scroll" id="topRatedScroll"></div>
+                    <button class="scroll-btn next-scroll" data-target="topRatedScroll" aria-label="Scroll Right"><i class="fas fa-chevron-right"></i></button>
+                </div>
+            </section>
+            
+            <!-- Popular Row -->
+            <section class="movie-row-section" id="popularRow">
+                <h2 class="row-title"><i class="fas fa-heart" style="color: var(--primary-color); margin-right: 8px;"></i>Popular</h2>
+                <div class="row-container">
+                    <button class="scroll-btn prev-scroll" data-target="popularScroll" aria-label="Scroll Left"><i class="fas fa-chevron-left"></i></button>
+                    <div class="movie-row-scroll" id="popularScroll"></div>
+                    <button class="scroll-btn next-scroll" data-target="popularScroll" aria-label="Scroll Right"><i class="fas fa-chevron-right"></i></button>
+                </div>
+            </section>
+            
+            <!-- Recommendations Row -->
+            <section class="movie-row-section" id="recommendationsRow" style="display: none;">
+                <h2 class="row-title"><i class="fas fa-magic" style="color: var(--primary-color); margin-right: 8px;"></i>Recommendations</h2>
+                <div class="row-container">
+                    <button class="scroll-btn prev-scroll" data-target="recommendationsScroll" aria-label="Scroll Left"><i class="fas fa-chevron-left"></i></button>
+                    <div class="movie-row-scroll" id="recommendationsScroll"></div>
+                    <button class="scroll-btn next-scroll" data-target="recommendationsScroll" aria-label="Scroll Right"><i class="fas fa-chevron-right"></i></button>
+                </div>
+            </section>
+        </div>
+
+        <!-- Movies Grid (Used for Search & Filters) -->
+        <section class="movies-section" id="discoverSection" style="display: none;">
+            <h2 class="section-title" id="discoverTitle">Discover Movies</h2>
             <div class="movies-grid" id="moviesGrid">
                 <!-- Movie cards will be loaded here -->
             </div>
@@ -144,20 +183,20 @@
                 <div class="spinner"></div>
                 <p>Loading movies...</p>
             </div>
-        </section>
-
-        <!-- Pagination -->
-        <div class="pagination" id="pagination">
-            <button class="pagination-btn" id="prevBtn">
-                <i class="fas fa-chevron-left"></i> Previous
-            </button>
-            <div class="page-info">
-                <span id="pageNumber">1</span> / <span id="totalPages">1</span>
+            
+            <!-- Pagination -->
+            <div class="pagination" id="pagination">
+                <button class="pagination-btn" id="prevBtn">
+                    <i class="fas fa-chevron-left"></i> Previous
+                </button>
+                <div class="page-info">
+                    <span id="pageNumber">1</span> / <span id="totalPages">1</span>
+                </div>
+                <button class="pagination-btn" id="nextBtn">
+                    Next <i class="fas fa-chevron-right"></i>
+                </button>
             </div>
-            <button class="pagination-btn" id="nextBtn">
-                Next <i class="fas fa-chevron-right"></i>
-            </button>
-        </div>
+        </section>
     </main>
 
     <!-- Movie Detail Modal -->

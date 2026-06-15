@@ -29,6 +29,16 @@ public class GatewayController {
         return proxyRequest(request, body, method, "http://localhost:8082");
     }
 
+    @RequestMapping(value = "/api/stream/**", method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.PATCH})
+    public ResponseEntity<?> proxyStream(HttpServletRequest request, @RequestBody(required = false) String body, HttpMethod method) {
+        return proxyRequest(request, body, method, "http://localhost:8083");
+    }
+
+    @RequestMapping(value = "/api/recommendations/**", method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.PATCH})
+    public ResponseEntity<?> proxyRecommendations(HttpServletRequest request, @RequestBody(required = false) String body, HttpMethod method) {
+        return proxyRequest(request, body, method, "http://localhost:8084");
+    }
+
     private ResponseEntity<?> proxyRequest(HttpServletRequest request, String body, HttpMethod method, String targetBaseUrl) {
         String path = request.getRequestURI();
         String query = request.getQueryString();

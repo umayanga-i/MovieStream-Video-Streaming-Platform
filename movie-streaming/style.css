@@ -61,6 +61,12 @@ body {
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.logo:hover {
+    transform: scale(1.02);
 }
 
 .logo i {
@@ -515,6 +521,24 @@ body {
     font-size: 12px;
     border: 1px solid var(--primary-color);
 }
+
+.movie-badge.watch-now-btn {
+    width: 100%;
+    text-align: center;
+    cursor: pointer;
+    background: rgba(229, 9, 20, 0.1);
+    font-family: inherit;
+    font-weight: 600;
+    transition: var(--transition);
+}
+
+.movie-badge.watch-now-btn:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(229, 9, 20, 0.3);
+}
+
 
 .badge {
     display: inline-block;
@@ -1361,3 +1385,111 @@ body {
 .success-message.show {
     display: block;
 }
+
+/* ===== MOVIE ROWS (VERTICAL SECTIONS WITH HORIZONTAL SCROLL) ===== */
+.vertical-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 45px;
+    margin-bottom: 60px;
+    margin-top: 20px;
+}
+
+.movie-row-section {
+    position: relative;
+    width: 100%;
+}
+
+.row-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 15px;
+    position: relative;
+    padding-bottom: 8px;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+}
+
+.row-title::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 40px;
+    height: 3px;
+    background: linear-gradient(135deg, var(--primary-color) 0%, #ff6b6b 100%);
+    border-radius: 2px;
+}
+
+.row-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.movie-row-scroll {
+    display: flex;
+    gap: 20px;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    padding: 15px 5px;
+    scrollbar-width: none; /* Firefox */
+    width: 100%;
+}
+
+.movie-row-scroll::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+}
+
+.movie-row-scroll .movie-card {
+    flex: 0 0 220px; /* Do not grow, do not shrink, fix width to 220px */
+    height: auto;
+}
+
+.scroll-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+    opacity: 0;
+    backdrop-filter: blur(5px);
+}
+
+.row-container:hover .scroll-btn {
+    opacity: 1;
+}
+
+.scroll-btn:hover {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    transform: translateY(-50%) scale(1.1);
+}
+
+.prev-scroll {
+    left: -22px;
+}
+
+.next-scroll {
+    right: -22px;
+}
+
+.row-loading, .row-empty, .row-error {
+    padding: 40px;
+    width: 100%;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.5);
+    font-style: italic;
+}

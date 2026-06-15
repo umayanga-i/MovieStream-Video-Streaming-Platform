@@ -20,13 +20,15 @@ import java.util.Optional;
 public class WatchlistController {
 
     private final WatchlistRepository watchlistRepository;
+    private final FavoriteRepository favoriteRepository;
 
     @Value("${jwt.secret}")
     private String secret;
 
     @Autowired
-    public WatchlistController(WatchlistRepository watchlistRepository) {
+    public WatchlistController(WatchlistRepository watchlistRepository, FavoriteRepository favoriteRepository) {
         this.watchlistRepository = watchlistRepository;
+        this.favoriteRepository = favoriteRepository;
     }
 
     @GetMapping
@@ -82,6 +84,66 @@ public class WatchlistController {
         try {
             String userId = getUserIdFromToken(authHeader);
             watchlistRepository.deleteByUserIdAndMovieId(userId, movieId);
+            return ResponseEntity.ok(Map.of("success", "true"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("success", "false", "message", "Unauthorized: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/favorites")
+    public ResponseEntity<?> getFavorites(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+        try {
+            String userId = getUserIdFromToken(authHeader);
+            List<FavoriteItem> items = favoriteRepository.findByUserId(userId);
+            return ResponseEntity.ok(Map.of(
+                    "success", "true",
+                    "data", items
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("success", "false", "message", "Unauthorized: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/favorites/add")
+    public ResponseEntity<?> addToFavorites(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody WatchlistRequest request) {
+        try {
+            String userId = getUserIdFromToken(authHeader);
+
+            if (request.getMovieId() == null) {
+                return ResponseEntity.badRequest().body(Map.of("success", "false", "message", "movieId is required"));
+            }
+
+            Optional<FavoriteItem> existing = favoriteRepository.findByUserIdAndMovieId(userId, request.getMovieId());
+            if (existing.isEmpty()) {
+                FavoriteItem item = FavoriteItem.builder()
+                        .userId(userId)
+                        .movieId(request.getMovieId())
+                        .movieTitle(request.getMovieTitle() != null ? request.getMovieTitle() : "Unknown Movie")
+                        .moviePosterPath(request.getMoviePosterPath())
+                        .movieRating(request.getMovieRating())
+                        .releaseDate(request.getReleaseDate())
+                        .build();
+                favoriteRepository.save(item);
+            }
+
+            return ResponseEntity.ok(Map.of("success", "true"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("success", "false", "message", "Unauthorized: " + e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/favorites/remove/{movieId}")
+    public ResponseEntity<?> removeFromFavorites(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @PathVariable Long movieId) {
+        try {
+            String userId = getUserIdFromToken(authHeader);
+            favoriteRepository.deleteByUserIdAndMovieId(userId, movieId);
             return ResponseEntity.ok(Map.of("success", "true"));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)

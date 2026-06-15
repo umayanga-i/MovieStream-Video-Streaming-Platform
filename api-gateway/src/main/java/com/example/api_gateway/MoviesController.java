@@ -87,11 +87,10 @@ public class MoviesController {
             urlBuilder.append("&vote_average.gte=").append(rating);
         }
 
-        // Apply dynamic sorting mapping based on category
         String sortBy = "popularity.desc";
         if ("top_rated".equalsIgnoreCase(category)) {
             sortBy = "vote_average.desc";
-            urlBuilder.append("&vote_count.gte=100"); // Ensure movies have significant votes to rate highly
+            urlBuilder.append("&vote_count.gte=100"); 
         } else if ("upcoming".equalsIgnoreCase(category)) {
             sortBy = "release_date.desc";
         }
